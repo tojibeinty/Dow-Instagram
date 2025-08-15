@@ -2,7 +2,7 @@ local telegram = require("telegram-bot-lua")
 local json = require("dkjson")
 
 -- ===== إعدادات عامة =====
-local BOT = telegram.Bot(os.getenv("BOT_TOKEN"))
+local BOT = telegram.Bot(os.getenv("8402805384:AAEHuN5nATyZAn-ea10htyoD5ax62cs0fL4"))
 
 -- ===== نطاقات طبيعية + شرح =====
 local TESTS = {
