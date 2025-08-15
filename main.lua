@@ -1,16 +1,17 @@
--- main.lua
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("cjson")
 
--- قراءة BOT_TOKEN من Environment Variables
+-- حاول قراءة التوكن من Environment Variables
 local BOT_TOKEN = os.getenv("BOT_TOKEN")
-print("DEBUG: BOT_TOKEN =", BOT_TOKEN)
 
+-- إذا لم يكن موجود، استخدم التوكن مباشرة (فقط للاختبار)
 if not BOT_TOKEN or BOT_TOKEN == "" then
-    print("❌ خطأ: BOT_TOKEN غير موجود. اضف توكن البوت في Environment Variables في Project Settings.")
-    os.exit(1)
+    print("⚠️ تحذير: BOT_TOKEN غير موجود في Environment Variables، سيتم استخدام التوكن المباشر.")
+    BOT_TOKEN = "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
 end
+
+print("DEBUG: BOT_TOKEN =", BOT_TOKEN)
 
 local BASE_URL = "https://api.telegram.org/bot" .. BOT_TOKEN
 
