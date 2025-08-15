@@ -1,14 +1,9 @@
 # main.py
 import os
 from telegram import Update, Bot
-from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, CallbackContext
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
 
-# قراءة التوكن من Environment Variables
 BOT_TOKEN = os.getenv("BOT_TOKEN") or "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
-
-bot = Bot(token=BOT_TOKEN)
-updater = Updater(token=BOT_TOKEN, use_context=True)
-dispatcher = updater.dispatcher
 
 # حالة المستخدم
 user_state = {}
@@ -22,24 +17,24 @@ def calc_ideal_weight(height, gender):
     return f"✅ الطول: {height} سم\nالجنس: {gender}\n\n📌 الوزن الصحي (BMI): {min_healthy:.1f} - {max_healthy:.1f} كغ\n⭐ الوزن المثالي: {ideal_point:.1f} كغ"
 
 # /start
-def start(update: Update, context: CallbackContext):
-    update.message.reply_text("أهلًا! أرسل /ideal لحساب وزنك المثالي.\nاكتب /cancel للإلغاء.")
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("أهلًا! أرسل /ideal لحساب وزنك المثالي.\nاكتب /cancel للإلغاء.")
 
 # /ideal
-def ideal(update: Update, context: CallbackContext):
-    chat_id = update.message.chat_id
+async def ideal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.message.chat.id
     user_state[chat_id] = {"step": "gender"}
-    update.message.reply_text("اختر الجنس: ذكر أو أنثى")
+    await update.message.reply_text("اختر الجنس: ذكر أو أنثى")
 
 # /cancel
-def cancel(update: Update, context: CallbackContext):
-    chat_id = update.message.chat_id
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.message.chat.id
     user_state.pop(chat_id, None)
-    update.message.reply_text("تم إلغاء العملية ✅")
+    await update.message.reply_text("تم إلغاء العملية ✅")
 
 # معالجة الرسائل
-def handle_message(update: Update, context: CallbackContext):
-    chat_id = update.message.chat_id
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.message.chat.id
     text = update.message.text
 
     if chat_id in user_state:
@@ -49,9 +44,9 @@ def handle_message(update: Update, context: CallbackContext):
             if text in ["ذكر", "أنثى"]:
                 user_state[chat_id]["gender"] = text
                 user_state[chat_id]["step"] = "height"
-                update.message.reply_text("أرسل طولك بالسنتيمتر (مثال: 170)")
+                await update.message.reply_text("أرسل طولك بالسنتيمتر (مثال: 170)")
             else:
-                update.message.reply_text("اختر الجنس من الخيارات: ذكر أو أنثى")
+                await update.message.reply_text("اختر الجنس من الخيارات: ذكر أو أنثى")
 
         elif step == "height":
             try:
@@ -59,20 +54,22 @@ def handle_message(update: Update, context: CallbackContext):
                 if 100 <= height <= 250:
                     gender = user_state[chat_id]["gender"]
                     result = calc_ideal_weight(height, gender)
-                    update.message.reply_text(result)
+                    await update.message.reply_text(result)
                     user_state.pop(chat_id)
                 else:
-                    update.message.reply_text("أدخل طول صحيح بين 100 و 250 سم.")
+                    await update.message.reply_text("أدخل طول صحيح بين 100 و 250 سم.")
             except:
-                update.message.reply_text("أدخل طول صحيح بين 100 و 250 سم.")
+                await update.message.reply_text("أدخل طول صحيح بين 100 و 250 سم.")
+
+# إنشاء التطبيق
+app = ApplicationBuilder().token(BOT_TOKEN).build()
 
 # إضافة الـ Handlers
-dispatcher.add_handler(CommandHandler("start", start))
-dispatcher.add_handler(CommandHandler("ideal", ideal))
-dispatcher.add_handler(CommandHandler("cancel", cancel))
-dispatcher.add_handler(MessageHandler(Filters.text & ~Filters.command, handle_message))
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("ideal", ideal))
+app.add_handler(CommandHandler("cancel", cancel))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
 # تشغيل البوت
 print("🤖 البوت جاهز ويعمل باستخدام Polling...")
-updater.start_polling()
-updater.idle()
+app.run_polling()
