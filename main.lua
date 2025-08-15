@@ -1,12 +1,7 @@
+-- main.lua
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("cjson")
-
--- طباعة كل متغيرات البيئة للتأكد
-print("🔹 طباعة جميع متغيرات البيئة:")
-for k, v in pairs(os.getenv()) do 
-    print(k, v) 
-end
 
 -- قراءة BOT_TOKEN من Environment Variables
 local BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -34,15 +29,12 @@ local function sendMessage(chat_id, text)
     }
 end
 
--- فتح خادم ويب لاستقبال Webhook
 local http = require("socket.http")
 local port = tonumber(os.getenv("PORT") or 3000)
 print("🤖 البوت جاهز على PORT:", port)
 
--- حالة المستخدم
 local user_state = {}
 
--- دالة لحساب الوزن المثالي
 local function calcIdealWeight(height, gender)
     local h_m = height / 100
     local min_healthy = 18.5 * (h_m ^ 2)
@@ -55,7 +47,6 @@ local function calcIdealWeight(height, gender)
     )
 end
 
--- معالجة الرسائل
 local function handleUpdate(update)
     local message = update.message
     if message and message.text then
