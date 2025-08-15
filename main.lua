@@ -1,23 +1,28 @@
+-- main.lua
+local http_server_available, http_server = pcall(require, "http.server")
+if not http_server_available then
+    print("❌ خطأ: مكتبة http.server غير موجودة. تأكد من تثبيت Lua 5.4 مع مكتبات الشبكة.")
+    os.exit(1)
+end
+
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
-local json = require("cjson")
+local cjson = require("cjson")
 
--- حاول قراءة التوكن من Environment Variables
+-- قراءة BOT_TOKEN
 local BOT_TOKEN = os.getenv("BOT_TOKEN")
-
--- إذا لم يكن موجود، استخدم التوكن مباشرة (فقط للاختبار)
 if not BOT_TOKEN or BOT_TOKEN == "" then
     print("⚠️ تحذير: BOT_TOKEN غير موجود في Environment Variables، سيتم استخدام التوكن المباشر.")
     BOT_TOKEN = "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
 end
-
 print("DEBUG: BOT_TOKEN =", BOT_TOKEN)
 
 local BASE_URL = "https://api.telegram.org/bot" .. BOT_TOKEN
 
+-- دالة إرسال رسالة
 local function sendMessage(chat_id, text)
     local payload = { chat_id = chat_id, text = text }
-    local body = json.encode(payload)
+    local body = cjson.encode(payload)
     https.request{
         url = BASE_URL .. "/sendMessage",
         method = "POST",
@@ -30,12 +35,10 @@ local function sendMessage(chat_id, text)
     }
 end
 
-local http = require("socket.http")
-local port = tonumber(os.getenv("PORT") or 3000)
-print("🤖 البوت جاهز على PORT:", port)
-
+-- حالة المستخدم
 local user_state = {}
 
+-- دالة لحساب الوزن المثالي
 local function calcIdealWeight(height, gender)
     local h_m = height / 100
     local min_healthy = 18.5 * (h_m ^ 2)
@@ -48,6 +51,7 @@ local function calcIdealWeight(height, gender)
     )
 end
 
+-- دالة لمعالجة الرسائل
 local function handleUpdate(update)
     local message = update.message
     if message and message.text then
@@ -84,4 +88,22 @@ local function handleUpdate(update)
     end
 end
 
-print("🤖 البوت جاهز للعمل عبر Webhook!")
+-- فتح خادم ويب لاستقبال Webhook
+local PORT = tonumber(os.getenv("PORT") or 8080)
+local server = http_server.new("0.0.0.0", PORT)
+local http_headers = require("http.headers")
+
+server:on("request", function(req, res)
+    local body = req:read_body()
+    if body and #body > 0 then
+        local ok, update = pcall(cjson.decode, body)
+        if ok and update then
+            handleUpdate(update)
+        end
+    end
+    res:write_head(200, {["Content-Type"] = "text/plain"})
+    res:finish("OK")
+end)
+
+print("🤖 البوت جاهز للعمل على PORT:", PORT)
+server:loop()
