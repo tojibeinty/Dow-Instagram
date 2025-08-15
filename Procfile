@@ -1,1 +1,1 @@
-worker: lua5.4 main.lua
+web: lua5.4 main.lua
