@@ -2,27 +2,19 @@ local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("cjson")
 
--- قراءة التوكن من Environment Variables
-local BOT_TOKEN = os.getenv("6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU")
-print("DEBUG: BOT_TOKEN =", BOT_TOKEN)  -- للتأكد من أن البوت يرى التوكن
+-- قراءة BOT_TOKEN من Environment Variables
+local BOT_TOKEN = os.getenv("BOT_TOKEN")
+print("DEBUG: BOT_TOKEN =", BOT_TOKEN)
 
 if not BOT_TOKEN or BOT_TOKEN == "" then
-    print("❌ خطأ: BOT_TOKEN غير موجود. اضف توكن البوت في Environment Variables.")
+    print("❌ خطأ: BOT_TOKEN غير موجود. اضف توكن البوت في Environment Variables في Project Settings.")
     os.exit(1)
 end
 
 local BASE_URL = "https://api.telegram.org/bot" .. BOT_TOKEN
 
--- دالة إرسال الرسائل
-local function sendMessage(chat_id, text, keyboard, remove_keyboard)
+local function sendMessage(chat_id, text)
     local payload = { chat_id = chat_id, text = text }
-
-    if keyboard then
-        payload.reply_markup = { keyboard = keyboard, one_time_keyboard = true, resize_keyboard = true }
-    elseif remove_keyboard then
-        payload.reply_markup = { remove_keyboard = true }
-    end
-
     local body = json.encode(payload)
     https.request{
         url = BASE_URL .. "/sendMessage",
@@ -36,31 +28,29 @@ local function sendMessage(chat_id, text, keyboard, remove_keyboard)
     }
 end
 
--- حساب الوزن المثالي
+-- فتح خادم ويب لاستقبال Webhook
+local http = require("socket.http")
+local ltn12 = require("ltn12")
+local port = tonumber(os.getenv("PORT") or 3000)
+print("🤖 البوت جاهز على PORT:", port)
+
+-- حالة المستخدم
+local user_state = {}
+
+-- دالة لحساب الوزن المثالي
 local function calcIdealWeight(height, gender)
     local h_m = height / 100
     local min_healthy = 18.5 * (h_m ^ 2)
     local max_healthy = 24.9 * (h_m ^ 2)
-
-    local ideal_point
-    if gender == "ذكر" then
-        ideal_point = (height - 100) * 0.9
-    else
-        ideal_point = (height - 100) * 0.85
-    end
+    local ideal_point = (gender == "ذكر") and (height - 100) * 0.9 or (height - 100) * 0.85
 
     return string.format(
-        "✅ الطول: %.0f سم\nالجنس: %s\n\n📌 الوزن الصحي (BMI): %.1f - %.1f كغ\n⭐ الوزن المثالي (بروكا): %.1f كغ",
+        "✅ الطول: %.0f سم\nالجنس: %s\n\n📌 الوزن الصحي (BMI): %.1f - %.1f كغ\n⭐ الوزن المثالي: %.1f كغ",
         height, gender, min_healthy, max_healthy, ideal_point
     )
 end
 
--- حفظ حالة المستخدم
-local user_state = {}
-
-print("🤖 البوت جاهز للعمل عبر Webhook!")
-
--- دالة للتعامل مع التحديثات (يتم استدعاؤها عند وصول POST request من Telegram)
+-- معالجة الرسائل
 local function handleUpdate(update)
     local message = update.message
     if message and message.text then
@@ -71,17 +61,17 @@ local function handleUpdate(update)
             sendMessage(chat_id, "أهلًا! أرسل /ideal لحساب وزنك المثالي.\nاكتب /cancel للإلغاء.")
         elseif text == "/ideal" then
             user_state[chat_id] = { step = "gender" }
-            sendMessage(chat_id, "اختر الجنس:", { { "ذكر", "أنثى" } })
+            sendMessage(chat_id, "اختر الجنس: ذكر أو أنثى")
         elseif text == "/cancel" then
             user_state[chat_id] = nil
-            sendMessage(chat_id, "تم إلغاء العملية ✅", nil, true)
+            sendMessage(chat_id, "تم إلغاء العملية ✅")
         elseif user_state[chat_id] and user_state[chat_id].step == "gender" then
             if text == "ذكر" or text == "أنثى" then
                 user_state[chat_id].gender = text
                 user_state[chat_id].step = "height"
-                sendMessage(chat_id, "أرسل طولك بالسنتيمتر (مثال: 170):", nil, true)
+                sendMessage(chat_id, "أرسل طولك بالسنتيمتر (مثال: 170)")
             else
-                sendMessage(chat_id, "اختر الجنس من الأزرار:", { { "ذكر", "أنثى" } })
+                sendMessage(chat_id, "اختر الجنس من الخيارات: ذكر أو أنثى")
             end
         elseif user_state[chat_id] and user_state[chat_id].step == "height" then
             local height = tonumber(text)
@@ -96,3 +86,5 @@ local function handleUpdate(update)
         end
     end
 end
+
+print("🤖 البوت جاهز للعمل عبر Webhook!")
