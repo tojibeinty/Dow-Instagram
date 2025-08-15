@@ -3,7 +3,7 @@ local ltn12 = require("ltn12")
 local json = require("cjson")
 
 -- قراءة التوكن من Environment Variables
-local BOT_TOKEN = os.getenv("6360843107:AAFtAbfyKv4_OCP0Cjkhsq7vHg6mi-VfdcE")
+local BOT_TOKEN = os.getenv("6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU")
 print("DEBUG: BOT_TOKEN =", BOT_TOKEN)  -- للتأكد من أن البوت يرى التوكن
 
 if not BOT_TOKEN or BOT_TOKEN == "" then
