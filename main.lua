@@ -2,6 +2,12 @@ local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("cjson")
 
+-- طباعة كل متغيرات البيئة للتأكد
+print("🔹 طباعة جميع متغيرات البيئة:")
+for k, v in pairs(os.getenv()) do 
+    print(k, v) 
+end
+
 -- قراءة BOT_TOKEN من Environment Variables
 local BOT_TOKEN = os.getenv("BOT_TOKEN")
 print("DEBUG: BOT_TOKEN =", BOT_TOKEN)
@@ -30,7 +36,6 @@ end
 
 -- فتح خادم ويب لاستقبال Webhook
 local http = require("socket.http")
-local ltn12 = require("ltn12")
 local port = tonumber(os.getenv("PORT") or 3000)
 print("🤖 البوت جاهز على PORT:", port)
 
