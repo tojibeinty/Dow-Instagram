@@ -1,0 +1,1 @@
+worker: lua main.lua
