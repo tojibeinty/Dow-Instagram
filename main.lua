@@ -1,13 +1,15 @@
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local json = require("cjson")
-local socket = require("socket") -- للتأخير إذا لزم
 
+-- قراءة التوكن من Environment Variables
 local BOT_TOKEN = os.getenv("6360843107:AAFtAbfyKv4_OCP0Cjkhsq7vHg6mi-VfdcE")
 if not BOT_TOKEN or BOT_TOKEN == "" then
     print("❌ خطأ: BOT_TOKEN غير موجود. اضف توكن البوت في Environment Variables.")
     os.exit(1)
 end
+
+print("✅ BOT_TOKEN موجود:", BOT_TOKEN)
 
 local BASE_URL = "https://api.telegram.org/bot" .. BOT_TOKEN
 
@@ -56,20 +58,11 @@ end
 -- حفظ حالة المستخدم
 local user_state = {}
 
--- HTTP Server صغير لاستقبال Webhook
-local http = require("socket.http")
-local ltn12 = require("ltn12")
-local server = require("socket.http").server
+print("🤖 البوت جاهز للعمل عبر Webhook!")
 
--- في Railway سنستخدم port من ENV
-local PORT = os.getenv("PORT") or 3000
-print("🤖 البوت يعمل الآن على Webhook، Port: " .. PORT)
-
--- استخدام مكتبة wsapi / lhttpd على Railway:
--- هنا مجرد مثال تخيلي:  
--- على Railway يمكنك ربط Node.js أو Lua server يرسل POST request للبوت
--- الفكرة الأساسية: عند وصول POST request، تنفذ الكود التالي:
-
+-- ملاحظة: على Railway، ستستخدم Webhook URL المقدم من المشروع
+-- عند وصول POST request من Telegram، استدعي هذه الدالة مع محتوى الرسالة:
+-- handleUpdate(update)
 local function handleUpdate(update)
     local message = update.message
     if message and message.text then
@@ -105,5 +98,3 @@ local function handleUpdate(update)
         end
     end
 end
-
-print("✅ الآن البوت جاهز لاستقبال الرسائل عبر Webhook!")
