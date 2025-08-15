@@ -1,31 +1,12 @@
 -- main.lua
-local https = require("ssl.https")
-local ltn12 = require("ltn12")
+local telegram = require("telegram-bot-lua")
 local cjson = require("cjson")
-local http_server = require("http.server")
-local http_headers = require("http.headers")
 
--- قراءة BOT_TOKEN
+-- BOT_TOKEN
 local BOT_TOKEN = os.getenv("BOT_TOKEN") or "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
 print("DEBUG: BOT_TOKEN =", BOT_TOKEN)
 
-local BASE_URL = "https://api.telegram.org/bot" .. BOT_TOKEN
-
--- دالة إرسال رسالة
-local function sendMessage(chat_id, text)
-    local payload = { chat_id = chat_id, text = text }
-    local body = cjson.encode(payload)
-    https.request{
-        url = BASE_URL .. "/sendMessage",
-        method = "POST",
-        headers = {
-            ["Content-Type"] = "application/json",
-            ["Content-Length"] = #body
-        },
-        source = ltn12.source.string(body),
-        sink = ltn12.sink.null()
-    }
-end
+local bot = telegram.new(BOT_TOKEN)
 
 -- حالة المستخدم
 local user_state = {}
@@ -43,7 +24,7 @@ local function calcIdealWeight(height, gender)
     )
 end
 
--- دالة لمعالجة الرسائل
+-- دالة معالجة الرسائل
 local function handleUpdate(update)
     local message = update.message
     if message and message.text then
@@ -51,50 +32,42 @@ local function handleUpdate(update)
         local text = message.text
 
         if text == "/start" then
-            sendMessage(chat_id, "أهلًا! أرسل /ideal لحساب وزنك المثالي.\nاكتب /cancel للإلغاء.")
+            bot:sendMessage(chat_id, "أهلًا! أرسل /ideal لحساب وزنك المثالي.\nاكتب /cancel للإلغاء.")
         elseif text == "/ideal" then
             user_state[chat_id] = { step = "gender" }
-            sendMessage(chat_id, "اختر الجنس: ذكر أو أنثى")
+            bot:sendMessage(chat_id, "اختر الجنس: ذكر أو أنثى")
         elseif text == "/cancel" then
             user_state[chat_id] = nil
-            sendMessage(chat_id, "تم إلغاء العملية ✅")
+            bot:sendMessage(chat_id, "تم إلغاء العملية ✅")
         elseif user_state[chat_id] and user_state[chat_id].step == "gender" then
             if text == "ذكر" or text == "أنثى" then
                 user_state[chat_id].gender = text
                 user_state[chat_id].step = "height"
-                sendMessage(chat_id, "أرسل طولك بالسنتيمتر (مثال: 170)")
+                bot:sendMessage(chat_id, "أرسل طولك بالسنتيمتر (مثال: 170)")
             else
-                sendMessage(chat_id, "اختر الجنس من الخيارات: ذكر أو أنثى")
+                bot:sendMessage(chat_id, "اختر الجنس من الخيارات: ذكر أو أنثى")
             end
         elseif user_state[chat_id] and user_state[chat_id].step == "height" then
             local height = tonumber(text)
             if height and height >= 100 and height <= 250 then
                 local gender = user_state[chat_id].gender
                 local result = calcIdealWeight(height, gender)
-                sendMessage(chat_id, result)
+                bot:sendMessage(chat_id, result)
                 user_state[chat_id] = nil
             else
-                sendMessage(chat_id, "أدخل طول صحيح بين 100 و 250 سم.")
+                bot:sendMessage(chat_id, "أدخل طول صحيح بين 100 و 250 سم.")
             end
         end
     end
 end
 
--- فتح خادم ويب لاستقبال Webhook
-local PORT = tonumber(os.getenv("PORT") or 8080)
-local server = http_server.new("0.0.0.0", PORT)
+print("🤖 البوت يعمل باستخدام Polling...")
 
-server:on("request", function(req, res)
-    local body = req:read_body()
-    if body and #body > 0 then
-        local ok, update = pcall(cjson.decode, body)
-        if ok and update then
-            handleUpdate(update)
-        end
+-- حلقة Polling مستمرة
+while true do
+    local updates = bot:getUpdates()
+    for _, update in ipairs(updates) do
+        handleUpdate(update)
     end
-    res:write_head(200, {["Content-Type"]="text/plain"})
-    res:finish("OK")
-end)
-
-print("🤖 البوت جاهز للعمل على PORT:", PORT)
-server:loop()
+    os.execute("sleep 1") -- تأخير 1 ثانية
+end
