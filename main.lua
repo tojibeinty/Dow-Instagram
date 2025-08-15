@@ -4,12 +4,12 @@ local json = require("cjson")
 
 -- قراءة التوكن من Environment Variables
 local BOT_TOKEN = os.getenv("6360843107:AAFtAbfyKv4_OCP0Cjkhsq7vHg6mi-VfdcE")
+print("DEBUG: BOT_TOKEN =", BOT_TOKEN)  -- للتأكد من أن البوت يرى التوكن
+
 if not BOT_TOKEN or BOT_TOKEN == "" then
     print("❌ خطأ: BOT_TOKEN غير موجود. اضف توكن البوت في Environment Variables.")
     os.exit(1)
 end
-
-print("✅ BOT_TOKEN موجود:", BOT_TOKEN)
 
 local BASE_URL = "https://api.telegram.org/bot" .. BOT_TOKEN
 
@@ -60,9 +60,7 @@ local user_state = {}
 
 print("🤖 البوت جاهز للعمل عبر Webhook!")
 
--- ملاحظة: على Railway، ستستخدم Webhook URL المقدم من المشروع
--- عند وصول POST request من Telegram، استدعي هذه الدالة مع محتوى الرسالة:
--- handleUpdate(update)
+-- دالة للتعامل مع التحديثات (يتم استدعاؤها عند وصول POST request من Telegram)
 local function handleUpdate(update)
     local message = update.message
     if message and message.text then
