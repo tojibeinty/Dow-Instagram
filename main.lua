@@ -3,7 +3,7 @@ local ltn12 = require("ltn12")
 local json = require("cjson")
 
 -- التوكن الخاص بالبوت
-local BOT_TOKEN = os.getenv("8402805384:AAEHuN5nATyZAn-ea10htyoD5ax62cs0fL4") or "PUT-YOUR-BOT-TOKEN-HERE"
+local BOT_TOKEN = os.getenv("6360843107:AAFtZ2g48oALBHQbMOj9An72S_yZyonV_sw") 
 local BASE_URL = "https://api.telegram.org/bot" .. BOT_TOKEN
 
 -- دالة إرسال الرسائل
