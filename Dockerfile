@@ -25,6 +25,8 @@ RUN wget https://luarocks.github.io/luarocks/releases/luarocks-3.11.1.tar.gz \
 # تثبيت مكتبات Lua المطلوبة
 RUN luarocks install luasocket
 RUN luarocks install lua-cjson
+RUN luarocks install telegram-bot-lua
+
 
 # نسخ ملفات البوت إلى الحاوية
 WORKDIR /bot
