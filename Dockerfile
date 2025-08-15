@@ -1,7 +1,7 @@
-# استخدم صورة Ubuntu أساسية
+# صورة Ubuntu أساسية
 FROM ubuntu:22.04
 
-# تحديث النظام وتثبيت الأدوات الأساسية + libssl-dev لتثبيت luasec
+# تثبيت الأدوات الأساسية + Lua + LuaRocks + SSL
 RUN apt-get update && apt-get install -y \
     build-essential \
     wget \
@@ -9,7 +9,6 @@ RUN apt-get update && apt-get install -y \
     unzip \
     lua5.4 \
     lua5.4-dev \
-    git \
     libssl-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -23,15 +22,14 @@ RUN wget https://luarocks.github.io/luarocks/releases/luarocks-3.11.1.tar.gz \
     && cd / \
     && rm -rf luarocks-3.11.1*
 
-# تثبيت مكتبات Lua المطلوبة
+# تثبيت المكتبات المطلوبة
 RUN luarocks install luasocket
 RUN luarocks install lua-cjson
-RUN luarocks install luasec       # لإضافة دعم HTTPS
-RUN luarocks install telegram-bot-lua
+RUN luarocks install luasec   # لدعم HTTPS
 
-# نسخ ملفات البوت إلى الحاوية
+# نسخ ملفات المشروع
 WORKDIR /bot
 COPY . /bot
 
-# تعيين أمر التشغيل الافتراضي
+# تشغيل البوت
 CMD ["lua5.4", "main.lua"]
