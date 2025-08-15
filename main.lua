@@ -1,20 +1,12 @@
 -- main.lua
-local http_server_available, http_server = pcall(require, "http.server")
-if not http_server_available then
-    print("❌ خطأ: مكتبة http.server غير موجودة. تأكد من تثبيت Lua 5.4 مع مكتبات الشبكة.")
-    os.exit(1)
-end
-
 local https = require("ssl.https")
 local ltn12 = require("ltn12")
 local cjson = require("cjson")
+local http_server = require("http.server")
+local http_headers = require("http.headers")
 
 -- قراءة BOT_TOKEN
-local BOT_TOKEN = os.getenv("BOT_TOKEN")
-if not BOT_TOKEN or BOT_TOKEN == "" then
-    print("⚠️ تحذير: BOT_TOKEN غير موجود في Environment Variables، سيتم استخدام التوكن المباشر.")
-    BOT_TOKEN = "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
-end
+local BOT_TOKEN = os.getenv("BOT_TOKEN") or "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
 print("DEBUG: BOT_TOKEN =", BOT_TOKEN)
 
 local BASE_URL = "https://api.telegram.org/bot" .. BOT_TOKEN
@@ -91,7 +83,6 @@ end
 -- فتح خادم ويب لاستقبال Webhook
 local PORT = tonumber(os.getenv("PORT") or 8080)
 local server = http_server.new("0.0.0.0", PORT)
-local http_headers = require("http.headers")
 
 server:on("request", function(req, res)
     local body = req:read_body()
@@ -101,7 +92,7 @@ server:on("request", function(req, res)
             handleUpdate(update)
         end
     end
-    res:write_head(200, {["Content-Type"] = "text/plain"})
+    res:write_head(200, {["Content-Type"]="text/plain"})
     res:finish("OK")
 end)
 
