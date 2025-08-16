@@ -1,17 +1,12 @@
-# استخدم صورة Python الرسمية
 FROM python:3.12-slim
 
-# تعيين مجلد العمل
 WORKDIR /app
-
-# نسخ الملفات
 COPY . /app
 
-# تثبيت المكتبات المطلوبة
-RUN pip install --no-cache-dir python-telegram-bot==20.3
+# ffmpeg قد يُحسّن بعض حالات استخراج/تحويل الفيديو، اختياري
+RUN apt-get update && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
 
-# تعيين البيئة (اختياري، يمكن ضبطه في Railway)
-# ENV BOT_TOKEN=6360843107:AAFtAbfyKv4_OCP0Cjkhsq7vHg6mi-VfdcE
+RUN pip install --no-cache-dir -r requirements.txt
 
-# أمر التشغيل
 CMD ["python", "main.py"]
