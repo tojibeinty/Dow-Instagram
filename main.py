@@ -1,52 +1,47 @@
-import asyncio
-from aiogram import Bot, Dispatcher, types
-from aiogram.filters import Command
-import instaloader
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
+import random
+import string
+import json
 import os
-import requests
 
-# ضع توكن البوت مباشرة
-API_TOKEN = "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
+# ضع توكن البوت هنا مباشرة
+TOKEN = "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
 
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher()
+# ملف حفظ الباسوردات
+PASSWORD_FILE = "passwords.json"
 
-# مجلد مؤقت لتحميل الملفات
-TEMP_DIR = "downloads"
-os.makedirs(TEMP_DIR, exist_ok=True)
+# تحميل الباسوردات المحفوظة إذا وجدت
+if os.path.exists(PASSWORD_FILE):
+    with open(PASSWORD_FILE, "r") as f:
+        generated_passwords = set(json.load(f))
+else:
+    generated_passwords = set()
 
-loader = instaloader.Instaloader(download_videos=True, download_video_thumbnails=False, download_comments=False)
+def save_passwords():
+    with open(PASSWORD_FILE, "w") as f:
+        json.dump(list(generated_passwords), f)
 
-@dp.message(Command(commands=["start"]))
-async def start_handler(message: types.Message):
-    await message.answer("مرحباً! أرسل رابط إنستاغرام لتحميل الفيديو أو البوست أو الستوري.")
+def generate_password(length=12):
+    while True:
+        characters = string.ascii_letters + string.digits + string.punctuation
+        password = ''.join(random.choice(characters) for _ in range(length))
+        if password not in generated_passwords:
+            generated_passwords.add(password)
+            save_passwords()
+            return password
 
-@dp.message()
-async def download_instagram(message: types.Message):
-    url = message.text.strip()
-    await message.answer("جارٍ تحميل المحتوى من إنستاغرام... ⏳")
-    
-    try:
-        # تحميل المنشور
-        shortcode = url.split("/")[-2]
-        post = instaloader.Post.from_shortcode(loader.context, shortcode)
-        filename = os.path.join(TEMP_DIR, f"{shortcode}.mp4")
-        loader.download_post(post, target=TEMP_DIR)
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("مرحباً! استخدم /password للحصول على باسورد قوي وفريد.")
 
-        # البحث عن الملف الناتج
-        for file in os.listdir(TEMP_DIR):
-            if file.endswith(".mp4") and shortcode in file:
-                file_path = os.path.join(TEMP_DIR, file)
-                await message.answer_video(open(file_path, "rb"))
-                os.remove(file_path)
-                return
+async def password(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    pwd = generate_password(12)
+    await update.message.reply_text(f"🛡️ باسوردك الجديد: {pwd}")
 
-        await message.answer("لم يتم العثور على فيديو.")
-    except Exception as e:
-        await message.answer(f"حدث خطأ: {e}")
+app = ApplicationBuilder().token(TOKEN).build()
 
-async def main():
-    await dp.start_polling(bot)
+app.add_handler(CommandHandler("start", start))
+app.add_handler(CommandHandler("password", password))
 
-if __name__ == "__main__":
-    asyncio.run(main())
+print("البوت يعمل الآن...")
+app.run_polling()
