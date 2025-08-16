@@ -1,3 +1,4 @@
+pip install aiogram instaloader requests
 aiogram==2.25.2
 yt-dlp==2025.1.26
 requests==2.32.3
