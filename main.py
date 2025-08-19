@@ -1,42 +1,49 @@
 import logging
-from telegram import Update
-from telegram.ext import Application, CommandHandler, ContextTypes
 import requests
+from telegram import Update
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# إعدادات البوت
+# ====== إعدادات البوت ======
 BOT_TOKEN = "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
+API_URL = "https://api.coingecko.com/api/v3/simple/price"
 
-# إعداد سجل الأخطاء
+# ====== تفعيل اللوغ ======
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-# دالة لجلب سعر البيتكوين
-def get_crypto_price(symbol: str = "BTCUSDT") -> str:
-    try:
-        response = requests.get(f"https://api.binance.com/api/v3/ticker/price?symbol={symbol}")
-        data = response.json()
-        return f"سعر {symbol}: {data['price']} USDT"
-    except Exception as e:
-        return f"حدث خطأ: {e}"
-
-# أمر /start
+# ====== دالة البدء ======
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("أهلاً! أرسل /price لمعرفة سعر البيتكوين.")
+    await update.message.reply_text("أهلاً! أرسل لي اسم أي عملة رقمية لأعطيك السعر بالدولار 💰.\nمثال: bitcoin أو ethereum")
 
-# أمر /price
-async def price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = get_crypto_price()
-    await update.message.reply_text(text)
+# ====== جلب السعر ======
+async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    coin = update.message.text.strip().lower()
+    params = {
+        "ids": coin,
+        "vs_currencies": "usd"
+    }
+    try:
+        response = requests.get(API_URL, params=params).json()
+        if coin in response:
+            price = response[coin]['usd']
+            await update.message.reply_text(f"💰 سعر {coin.capitalize()} هو: {price} USD")
+        else:
+            await update.message.reply_text("⚠️ لم أتمكن من العثور على هذه العملة. حاول مرة أخرى باسم صحيح.")
+    except Exception as e:
+        await update.message.reply_text("❌ حدث خطأ أثناء جلب السعر. حاول لاحقاً.")
 
+# ====== الدالة الرئيسية ======
 async def main():
-    # إنشاء التطبيق
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # الأوامر
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("price", price))
+    app.add_handler(CommandHandler("price", get_price))  # يمكن كتابة /price bitcoin
+    app.add_handler(CommandHandler("help", start))
 
-    # تشغيل البوت
+    # التعامل مع النصوص العادية كأسماء عملات
+    from telegram.ext import MessageHandler, filters
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, get_price))
+
+    print("✅ البوت يعمل الآن ...")
     await app.run_polling()
 
 if __name__ == "__main__":
