@@ -1,7 +1,7 @@
 import logging
 import requests
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, JobQueue
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
 import asyncio
 
 # ===== إعدادات البوت =====
@@ -61,27 +61,29 @@ async def top10(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❌ حدث خطأ أثناء جلب قائمة العملات. حاول لاحقًا.")
 
 # ===== مهمة إرسال Top 10 تلقائيًا =====
-async def send_top10_job(context: ContextTypes.DEFAULT_TYPE):
-    coins_str = ",".join(TOP_COINS)
-    params = {"ids": coins_str, "vs_currencies": "usd"}
-    try:
-        response = requests.get(API_URL, params=params, timeout=10).json()
-        message = "💰 **Top 10 العملات الرقمية (تحديث تلقائي):**\n"
-        for coin in TOP_COINS:
-            price = response.get(coin, {}).get("usd", "N/A")
-            message += f"{coin.capitalize()}: {price} USD\n"
-
-        # إرسال الرسالة لكل المستخدمين
-        for chat_id in user_chats:
+async def send_top10_loop(app):
+    await asyncio.sleep(10)  # أول مرة بعد 10 ثواني
+    while True:
+        if user_chats:
+            coins_str = ",".join(TOP_COINS)
+            params = {"ids": coins_str, "vs_currencies": "usd"}
             try:
-                await context.bot.send_message(chat_id=chat_id, text=message)
+                response = requests.get(API_URL, params=params, timeout=10).json()
+                message = "💰 **Top 10 العملات الرقمية (تحديث تلقائي):**\n"
+                for coin in TOP_COINS:
+                    price = response.get(coin, {}).get("usd", "N/A")
+                    message += f"{coin.capitalize()}: {price} USD\n"
+                for chat_id in user_chats:
+                    try:
+                        await app.bot.send_message(chat_id=chat_id, text=message)
+                    except:
+                        pass
             except:
-                pass  # تجاهل الأخطاء إذا حذف المستخدم البوت
-    except Exception:
-        pass  # تجاهل أخطاء الشبكة
+                pass
+        await asyncio.sleep(60)  # كل دقيقة
 
 # ===== الدالة الرئيسية =====
-def main():
+async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # Handlers
@@ -90,13 +92,19 @@ def main():
     app.add_handler(CommandHandler("top10", top10))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, get_price))
 
-    # إضافة JobQueue لتحديث Top 10 كل دقيقة
-    job_queue = app.job_queue
-    job_queue.run_repeating(send_top10_job, interval=60, first=10)
-
+    # تشغيل البوت
     print("✅ البوت يعمل الآن مع تحديث Top 10 تلقائي كل دقيقة على Railway...")
-    app.run_polling()
+    await app.initialize()
+    await app.start()
+
+    # تشغيل التحديث التلقائي كـ task
+    asyncio.create_task(send_top10_loop(app))
+
+    # تشغيل Polling
+    await app.updater.start_polling()
+    await app.updater.idle()
 
 # ===== تشغيل البوت =====
 if __name__ == "__main__":
-    main()
+    import asyncio
+    asyncio.run(main())
