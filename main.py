@@ -3,12 +3,13 @@ import requests
 import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+import asyncio
 
 # ===== إعدادات البوت =====
 BOT_TOKEN = "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
-WEBHOOK_URL = "https://delightful-smile.up.railway.app"  # عدل إلى رابط مشروعك على Railway
-API_URL = "https://api.coingecko.com/api/v3/simple/price"
+WEBHOOK_URL = "https://delightful-smile.up.railway.app"  # عدّل إلى رابط مشروعك على Railway
 PORT = int(os.environ.get("PORT", 8000))
+API_URL = "https://api.coingecko.com/api/v3/simple/price"
 
 # ===== تفعيل اللوغ =====
 logging.basicConfig(level=logging.INFO)
@@ -37,21 +38,26 @@ async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
+    # إضافة handlers
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("help", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, get_price))
 
     print("✅ البوت يعمل الآن باستخدام Webhook...")
 
+    # === تصحيح المشكلة ===
+    await app.initialize()  # يجب استدعاؤها أولًا
     await app.start()
+
     await app.updater.start_webhook(
         listen="0.0.0.0",
         port=PORT,
         url_path=BOT_TOKEN,
         webhook_url=f"{WEBHOOK_URL}/{BOT_TOKEN}",
     )
+
     await app.updater.idle()
 
+# ===== تشغيل البوت =====
 if __name__ == "__main__":
-    import asyncio
     asyncio.run(main())
