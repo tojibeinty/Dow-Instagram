@@ -1,7 +1,7 @@
 import logging
 import requests
 from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, Job
 import asyncio
 
 # ===== إعدادات البوت =====
@@ -13,24 +13,15 @@ TOP_COINS = ["bitcoin", "ethereum", "tether", "bnb", "usd-coin",
 # ===== تفعيل اللوغ =====
 logging.basicConfig(level=logging.INFO)
 
-# قائمة لحفظ chat_ids للمستخدمين
-user_chats = set()
-
 # ===== دالة البداية =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    user_chats.add(chat_id)
     await update.message.reply_text(
         "مرحبًا! أرسل اسم أي عملة رقمية لأعطيك السعر بالدولار 💰.\n"
-        "أو اكتب /top10 لرؤية أسعار أشهر 10 عملات.\n"
-        "سيتم تحديث Top 10 تلقائيًا كل دقيقة."
+        "أو اكتب /top10 لرؤية أسعار أشهر 10 عملات."
     )
 
 # ===== دالة جلب سعر العملة =====
 async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    user_chats.add(chat_id)
-
     coin = update.message.text.strip().lower()
     params = {"ids": coin, "vs_currencies": "usd"}
     try:
@@ -45,9 +36,6 @@ async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ===== دالة Top 10 العملات =====
 async def top10(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.message.chat_id
-    user_chats.add(chat_id)
-
     coins_str = ",".join(TOP_COINS)
     params = {"ids": coins_str, "vs_currencies": "usd"}
     try:
@@ -60,30 +48,8 @@ async def top10(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception:
         await update.message.reply_text("❌ حدث خطأ أثناء جلب قائمة العملات. حاول لاحقًا.")
 
-# ===== مهمة إرسال Top 10 تلقائيًا =====
-async def send_top10_loop(app):
-    await asyncio.sleep(10)  # أول مرة بعد 10 ثواني
-    while True:
-        if user_chats:
-            coins_str = ",".join(TOP_COINS)
-            params = {"ids": coins_str, "vs_currencies": "usd"}
-            try:
-                response = requests.get(API_URL, params=params, timeout=10).json()
-                message = "💰 **Top 10 العملات الرقمية (تحديث تلقائي):**\n"
-                for coin in TOP_COINS:
-                    price = response.get(coin, {}).get("usd", "N/A")
-                    message += f"{coin.capitalize()}: {price} USD\n"
-                for chat_id in user_chats:
-                    try:
-                        await app.bot.send_message(chat_id=chat_id, text=message)
-                    except:
-                        pass
-            except:
-                pass
-        await asyncio.sleep(60)  # كل دقيقة
-
 # ===== الدالة الرئيسية =====
-async def main():
+def main():
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
     # Handlers
@@ -92,19 +58,9 @@ async def main():
     app.add_handler(CommandHandler("top10", top10))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, get_price))
 
-    # تشغيل البوت
-    print("✅ البوت يعمل الآن مع تحديث Top 10 تلقائي كل دقيقة على Railway...")
-    await app.initialize()
-    await app.start()
-
-    # تشغيل التحديث التلقائي كـ task
-    asyncio.create_task(send_top10_loop(app))
-
-    # تشغيل Polling
-    await app.updater.start_polling()
-    await app.updater.idle()
+    print("✅ البوت يعمل الآن مع Top 10 العملات على Railway...")
+    app.run_polling()
 
 # ===== تشغيل البوت =====
 if __name__ == "__main__":
-    import asyncio
-    asyncio.run(main())
+    main()
