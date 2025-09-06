@@ -11,9 +11,9 @@ CHAT_ID = "6263195701"
 @app.route("/webhook", methods=["POST"])
 def webhook():
     try:
-        data = request.json
-        # إذا كان JSON صالح، ننسق الرسالة
-        if data and isinstance(data, dict):
+        # محاولة قراءة JSON أولًا
+        if request.is_json:
+            data = request.get_json()
             alert_message = (
                 "🚨 تنبيه من TradingView\n\n"
                 f"الرمز: {data.get('symbol','غير متوفر')}\n"
@@ -21,7 +21,7 @@ def webhook():
                 f"الوقت: {data.get('time','غير متوفر')}"
             )
         else:
-            # إذا كان نص عادي، نرسل كما هو
+            # إذا لم يكن JSON، نقرأ النص الخام
             alert_message = request.data.decode("utf-8")
     except Exception as e:
         alert_message = f"Error processing alert: {e}"
