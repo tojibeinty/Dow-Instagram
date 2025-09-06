@@ -1,66 +1,29 @@
-import logging
+from flask import Flask, request
 import requests
-from telegram import Update
-from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes, MessageHandler, filters, Job
-import asyncio
 
-# ===== إعدادات البوت =====
-BOT_TOKEN = "6360843107:AAFnP3OC3aU6dfUvGC3KZ0ZMZWtzs_4qaBU"
-API_URL = "https://api.coingecko.com/api/v3/simple/price"
-TOP_COINS = ["bitcoin", "ethereum", "tether", "bnb", "usd-coin",
-             "xrp", "cardano", "dogecoin", "polygon", "solana"]
+app = Flask(__name__)
 
-# ===== تفعيل اللوغ =====
-logging.basicConfig(level=logging.INFO)
+# 🔹 ضع بيانات البوت هنا مباشرة
+BOT_TOKEN = "6360843107:AAE523o40KV4VwWdFj_D1rwI64ikMcPXjsM"
+CHAT_ID = "6263195701"
 
-# ===== دالة البداية =====
-async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "مرحبًا! أرسل اسم أي عملة رقمية لأعطيك السعر بالدولار 💰.\n"
-        "أو اكتب /top10 لرؤية أسعار أشهر 10 عملات."
-    )
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    data = request.json
 
-# ===== دالة جلب سعر العملة =====
-async def get_price(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    coin = update.message.text.strip().lower()
-    params = {"ids": coin, "vs_currencies": "usd"}
-    try:
-        response = requests.get(API_URL, params=params, timeout=10).json()
-        if coin in response:
-            price = response[coin]["usd"]
-            await update.message.reply_text(f"💰 سعر {coin.capitalize()} هو: {price} USD")
-        else:
-            await update.message.reply_text("⚠️ لم أتمكن من العثور على هذه العملة. حاول باسم صحيح.")
-    except Exception:
-        await update.message.reply_text("❌ حدث خطأ أثناء جلب السعر. حاول لاحقًا.")
+    # 🔹 نص الرسالة اللي توصل على التليجرام
+    alert_message = f"🚨 تنبيه من TradingView\n\n{data}"
 
-# ===== دالة Top 10 العملات =====
-async def top10(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    coins_str = ",".join(TOP_COINS)
-    params = {"ids": coins_str, "vs_currencies": "usd"}
-    try:
-        response = requests.get(API_URL, params=params, timeout=10).json()
-        message = "💰 **Top 10 العملات الرقمية:**\n"
-        for coin in TOP_COINS:
-            price = response.get(coin, {}).get("usd", "N/A")
-            message += f"{coin.capitalize()}: {price} USD\n"
-        await update.message.reply_text(message)
-    except Exception:
-        await update.message.reply_text("❌ حدث خطأ أثناء جلب قائمة العملات. حاول لاحقًا.")
+    # 🔹 إرسال الرسالة للبوت
+    url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": alert_message,
+        "parse_mode": "Markdown"
+    }
+    requests.post(url, json=payload)
 
-# ===== الدالة الرئيسية =====
-def main():
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+    return "OK"
 
-    # Handlers
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("help", start))
-    app.add_handler(CommandHandler("top10", top10))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, get_price))
-
-    print("✅ البوت يعمل الآن مع Top 10 العملات على Railway...")
-    app.run_polling()
-
-# ===== تشغيل البوت =====
-if __name__ == "__main__":
-    main()
+if __name__ == '__main__':
+    app.run(host="0.0.0.0", port=5000)
